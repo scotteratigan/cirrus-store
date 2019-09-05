@@ -1,0 +1,29 @@
+{
+  "name": "cirrus-store",
+  "version": "1.0.0",
+  "description": "box/dropbox inspired cloud storage solution built on s3",
+  "main": "scan.js",
+  "dependencies": {
+    "aws-sdk": "^2.523.0",
+    "chokidar": "^3.0.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scotteratigan/cirrus-store.git"
+  },
+  "keywords": [
+    "aws",
+    "s3",
+    "cloud-storage"
+  ],
+  "author": "Scott E Ratigan",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/scotteratigan/cirrus-store/issues"
+  },
+  "homepage": "https://github.com/scotteratigan/cirrus-store#readme"
+}

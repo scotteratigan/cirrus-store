@@ -7,11 +7,14 @@
 // todo: quicker hashing algorithm for very large files? (if size remains constant and we hash the very beginning and end of the file, it likely didn't change)
 
 // CONIFIG:
-const DOCUMENT_DIRECTORY = "/Users/scottratigan/Downloads";
-const HASH_FILE = "hashes.json";
-const HASH_ALG = "SHA256";
-const fileIgnores = { ".env": 1, ".DS_Store": 1 };
-const directoryIgnores = { node_modules: 1 };
+const options = require("./options");
+const {
+  DOCUMENT_DIRECTORY,
+  HASH_FILE,
+  HASH_ALG,
+  fileIgnores,
+  directoryIgnores
+} = options;
 
 // INCLUDES:
 const fs = require("fs");
