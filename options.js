@@ -8,13 +8,14 @@
 require("dotenv").config();
 
 const options = {
-  DOCUMENT_DIRECTORY: "/Users/scottratigan/Downloads",
-  HASH_FILE: "hashes.json",
-  HASH_ALG: "SHA256",
-  fileIgnores: { ".env": 1, ".DS_Store": 1 },
-  directoryIgnores: { node_modules: 1 },
-  awsBucketName: "cirrus-store",
-  awsRegion: "us-west-1",
+  DOCUMENT_DIRECTORY: "/Users/scottratigan/Downloads", // You will want to change this
+  HASH_FILE: "hashes.json", // saved in this directory
+  HASH_ALG: "SHA256", // alternatives depend on your environment
+  fileIgnores: { ".env": 1, ".DS_Store": 1, ".localized": 1 },
+  directoryIgnores: { node_modules: 1 }, // just in case, lol
+  maxFileSizeBytes: 10 * 1024 * 1024, // 10 MB (10*1024*1024 or 10485760) is default. This is the size prior to compression.
+  awsBucketName: "cirrus-store", // "cirrus-store" is default
+  awsRegion: "us-west-1", // "us-west-1" is default
   s3Key: process.env.S3_KEY_ID,
   s3Secret: process.env.S3_SECRET
 };

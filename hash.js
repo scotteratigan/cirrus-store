@@ -15,7 +15,8 @@ const {
   HASH_FILE,
   HASH_ALG,
   fileIgnores,
-  directoryIgnores
+  directoryIgnores,
+  maxFileSizeBytes
 } = options;
 
 // INCLUDES:
@@ -78,7 +79,6 @@ function constructHashes(fileArr) {
     await Promise.all(
       fileArr.map(file => {
         return new Promise(async (resolve, reject) => {
-          // console.log("file is:", file);
           hashes[file] = await getHash(file);
           return resolve();
         });
@@ -92,9 +92,18 @@ function rfc(dir) {
   // Recursive File Search - returns an array of strings representing the relative path from the base directory
   const objs = fs.readdirSync(dir, { withFileTypes: true });
   return objs.map(obj => {
-    // console.log("object.name:", obj.name);
     const { name: file } = obj;
-    if (obj.isFile() && !fileIgnores[file]) return path.join(dir, file);
+    const stats = fs.statSync(path.join(dir, file)); // todo: make this non-sync
+    const fileSizeInBytes = stats.size;
+    // console.log(obj.name, "-", fileSizeInBytes, "/", maxFileSizeBytes);
+    // todo: save file creation, modification, and access information (obj.Stats)
+    // https://nodejs.org/api/fs.html#fs_class_fs_dirent
+    if (
+      obj.isFile() &&
+      !fileIgnores[file] &&
+      fileSizeInBytes <= maxFileSizeBytes
+    )
+      return path.join(dir, file);
     if (obj.isDirectory() && !directoryIgnores[file])
       return rfc(path.join(dir, file));
   });

@@ -13,7 +13,8 @@
 module.exports = {
   compressAndUploadFile,
   compressAndUploadFileSync,
-  downloadAndDecompress
+  downloadAndDecompress,
+  deleteRemoteFile
 };
 
 // Libraries:
@@ -59,22 +60,23 @@ function compressFile(filePath) {
   });
 }
 
-function compressAndUploadFile(filePath) {
+function compressAndUploadFile(filePath, remoteFilePath = filePath) {
+  const newFileName = remoteFilePath + ".lz4";
   const encoder = lz4.createEncoderStream();
   const input = fs.createReadStream(filePath);
-  input.pipe(encoder).pipe(uploadFromStream(filePath + ".lz4"));
+  input.pipe(encoder).pipe(uploadFromStream(newFileName));
   input.on("finish", (err, data) => {
-    console.log("upload completed");
+    console.log("Uploaded:", filePath);
   });
 }
 
-function compressAndUploadFileSync(filePath) {
-  const newFileName = filePath + ".lz4";
+function compressAndUploadFileSync(filePath, remoteFilePath = filePath) {
+  const newFileName = remoteFilePath + ".lz4";
   const input = fs.readFileSync(filePath);
   const encodedFile = lz4.encode(input);
   const params = {
     Bucket: awsBucketName,
-    Key: filePath,
+    Key: remoteFilePath,
     Body: encodedFile
   };
   s3.upload(params, (s3Err, data) => {
@@ -144,6 +146,15 @@ function decompressFileSync(filePath) {
   var input = fs.readFileSync(filePath);
   var output = lz4.decode(input);
   fs.writeFileSync(newFileName, output);
+}
+
+function deleteRemoteFile(remotePath) {
+  const params = { Bucket: awsBucketName, Key: remotePath };
+  s3.deleteObject(params, function(err, data) {
+    if (err) console.log(err, err.stack);
+    // error
+    else console.log(); // deleted
+  });
 }
 
 // Additional reading here:

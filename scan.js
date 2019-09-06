@@ -6,17 +6,31 @@ module.exports = {
   fullScan, // combines the next three functions, adds console information
   scanForNewFiles,
   scanForRemovedFiles,
-  scanForUpdatedFiles
+  scanForUpdatedFiles,
+  returnHashes
 };
 
 // Note: new file and updated file procedures could technically be combined
 // I'm keeping them separate for now in case I want to trigger some additional action(s) when a new file is created
 
 // Initialization:
-const { createHashesFromFSscan, saveHashes, loadHashes } = require("./hash");
-fullScan();
+const {
+  createHashesFromFSscan,
+  saveHashes,
+  loadHashes,
+  getHashes
+} = require("./hash");
+let prevHashes = null;
+let newHashes = null;
+
+async function returnHashes() {
+  const prevHashes = await loadHashes();
+  const newHashes = await createHashesFromFSscan();
+  return { prevHashes, newHashes };
+}
 
 async function fullScan() {
+  // for testing purposes mostly - does not upload to s3
   const prevHashes = await loadHashes();
   const newHashes = await createHashesFromFSscan();
   const removedFiles = scanForRemovedFiles(prevHashes, newHashes);
