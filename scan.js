@@ -1,119 +1,70 @@
-// creates hashes of all files in a directory, recursively, and saves to hashes.json (minified)
-
-// for reading large files in chunks:
-// https://stackoverflow.com/questions/25110983/node-reading-file-in-specified-chunk-size
-
-// todo: add additional error handling (try/catch - return reject() blocks)
-// todo: quicker hashing algorithm for very large files? (if size remains constant and we hash the very beginning and end of the file, it likely didn't change)
-
-// CONIFIG:
-const options = require("./options");
-const {
-  DOCUMENT_DIRECTORY,
-  HASH_FILE,
-  HASH_ALG,
-  fileIgnores,
-  directoryIgnores
-} = options;
-
-// INCLUDES:
-const fs = require("fs");
-const path = require("path");
-const crypto = require("crypto");
+/* Module to be run at startup - check for any file changes since last run, in case files were changed
+ *
+ */
 
 module.exports = {
-  createHashesFromFSscan,
-  saveHashes,
-  loadHashes,
-  constructHashes
+  fullScan, // combines the next three functions, adds console information
+  scanForNewFiles,
+  scanForRemovedFiles,
+  scanForUpdatedFiles
 };
 
-function loadHashes() {
-  console.log("loading hashes from:", HASH_FILE);
-  return new Promise((resolve, reject) => {
-    if (!fs.existsSync(HASH_FILE)) {
-      console.error("No previous hash file found.");
-      return resolve({});
-    }
-    fs.readFile(HASH_FILE, (err, data) => {
-      if (err) return reject({});
-      const jsonData = JSON.parse(data);
-      return resolve(jsonData);
-    });
-  });
+// Note: new file and updated file procedures could technically be combined
+// I'm keeping them separate for now in case I want to trigger some additional action(s) when a new file is created
+
+// Initialization:
+const { createHashesFromFSscan, saveHashes, loadHashes } = require("./hash");
+fullScan();
+
+async function fullScan() {
+  const prevHashes = await loadHashes();
+  const newHashes = await createHashesFromFSscan();
+  const removedFiles = scanForRemovedFiles(prevHashes, newHashes);
+  console.log("total removed files:", removedFiles.length);
+  const addedFiles = scanForNewFiles(prevHashes, newHashes);
+  console.log("total added files:", addedFiles.length);
+  const updatedFiles = scanForUpdatedFiles(prevHashes, newHashes);
+  console.log("total files modified:", updatedFiles.length);
+  await saveHashes(newHashes);
 }
 
-function saveHashes(json) {
-  return new Promise((resolve, reject) => {
-    if (!json) return reject("saveHashes called with no json supplied.");
-    fs.writeFile(HASH_FILE, JSON.stringify(json), err => {
-      if (err) return reject(err);
-      console.log("Hashes saved to file.");
-      return resolve();
-    });
-  });
-}
-
-function createHashesFromFSscan() {
-  return new Promise(async (resolve, reject) => {
-    try {
-      console.log("Constructing file list...");
-      const fileList = rfc(DOCUMENT_DIRECTORY) // previously "cloud"
-        .flat()
-        .filter(elm => typeof elm === "string");
-      console.log("Calculating hashes for", fileList.length, "files...");
-      const hashes = await constructHashes(fileList);
-      return resolve(hashes);
-    } catch (err) {
-      return reject(err);
+function scanForRemovedFiles(prevHashes, newHashes) {
+  const prevFileList = Object.keys(prevHashes);
+  const removedFiles = [];
+  prevFileList.forEach(file => {
+    if (!newHashes[file]) {
+      console.log("file removed:", file);
+      removedFiles.push(file);
     }
   });
+  return removedFiles;
 }
 
-function constructHashes(fileArr) {
-  return new Promise(async (resolve, reject) => {
-    const hashes = {};
-    await Promise.all(
-      fileArr.map(file => {
-        return new Promise(async (resolve, reject) => {
-          // console.log("file is:", file);
-          hashes[file] = await getHash(file);
-          return resolve();
-        });
-      })
-    );
-    return resolve(hashes);
+function scanForNewFiles(prevHashes, newHashes) {
+  const currFileList = Object.keys(newHashes);
+  const addedFiles = [];
+  currFileList.forEach(file => {
+    if (!prevHashes[file]) {
+      console.log("File added:", file);
+      addedFiles.push(file);
+    }
   });
+  return addedFiles;
 }
 
-function rfc(dir) {
-  // Recursive File Search - returns an array of strings representing the relative path from the base directory
-  const objs = fs.readdirSync(dir, { withFileTypes: true });
-  return objs.map(obj => {
-    // console.log("object.name:", obj.name);
-    const { name: file } = obj;
-    if (obj.isFile() && !fileIgnores[file]) return path.join(dir, file);
-    if (obj.isDirectory() && !directoryIgnores[file])
-      return rfc(path.join(dir, file));
+function scanForUpdatedFiles(prevHashes, newHashes) {
+  const fileList = Object.keys(newHashes);
+  const updatedFiles = [];
+  fileList.forEach(file => {
+    if (!prevHashes[file] || !newHashes[file]) return;
+    // skip files that don't exist - handled in scanForNewFiles and scanForRemovedFiles
+    if (prevHashes[file][1] !== newHashes[file][1]) {
+      console.log(`File: ${file} - size changed.`);
+      updatedFiles.push(file);
+    } else if (prevHashes[file][0] !== newHashes[file][0]) {
+      console.log(`File: ${file} - hash changed.`);
+      updatedFiles.push(file);
+    }
   });
-}
-
-function getHash(path) {
-  // returns a promise to generate a hash of a given file
-  return new Promise((resolve, reject) => {
-    const hash = crypto.createHash(HASH_ALG);
-    const fileSize = getFilesizeInBytes(path);
-    const rs = fs.createReadStream(path);
-    rs.on("error", reject);
-    rs.on("data", chunk => hash.update(chunk));
-    rs.on("end", () => {
-      return resolve([hash.digest("hex"), fileSize]);
-    });
-  });
-}
-
-function getFilesizeInBytes(filename) {
-  const stats = fs.statSync(filename);
-  const fileSizeInBytes = stats.size;
-  return fileSizeInBytes;
+  return updatedFiles;
 }
