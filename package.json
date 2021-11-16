@@ -4,7 +4,7 @@
   "description": "box/dropbox inspired cloud storage solution built on s3",
   "main": "scan.js",
   "dependencies": {
-    "aws-sdk": "^2.523.0",
+    "aws-sdk": "^2.814.0",
     "chokidar": "^3.0.2",
     "dotenv": "^8.1.0",
     "lz4": "^0.6.3"
